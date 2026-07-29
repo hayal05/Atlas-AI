@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas AI · Admin</title>
+<style>
+  :root {
+    --ink: #1a1a18; --paper: #fdfcfa; --line: #e6e1d6;
+    --accent: #e8560c; --accent-dark: #c2440a; --accent-soft: #fdece0;
+    --danger: #9a3324; --danger-soft: #f6e6e2;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sans); background: var(--paper); color: var(--ink); display: flex; justify-content: center; }
+  .wrap { width: 100%; max-width: 720px; padding: 32px 20px 60px; }
+  header { margin-bottom: 24px; border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .brand-name { font-size: 17px; font-weight: 750; letter-spacing: -0.01em; }
+  .brand-name span { color: var(--accent); }
+  header .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  header h1 { font-size: 20px; margin: 0 0 6px; font-weight: 650; }
+  header p { margin: 0; color: #63625a; font-size: 14px; }
+  a.back { font-size: 13px; color: var(--accent-dark); text-decoration: none; }
+
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #63625a; }
+
+  #gate input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 13px; margin-bottom: 10px; }
+  #gate button, .btn { font-family: var(--sans); font-weight: 600; font-size: 13.5px; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+  #gate button:hover, .btn:hover { background: var(--accent-dark); }
+  #gate button:disabled, .btn:disabled { opacity: 0.5; cursor: default; }
+  #status-msg { font-size: 13px; margin-top: 8px; }
+  #status-msg.error { color: var(--danger); }
+  #status-msg.ok { color: var(--accent-dark); }
+
+  #main { display: none; }
+  .dropzone {
+    border: 1.5px dashed var(--line); border-radius: 10px; padding: 28px;
+    text-align: center; color: #63625a; font-size: 13.5px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone input { display: none; }
+  .hint { font-size: 12px; color: #93918a; margin-top: 8px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: #93918a; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px; border-bottom: 1px solid #f0ece1; }
+  td.size { color: #93918a; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .del { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; }
+  .del:hover { background: var(--danger-soft); }
+  .empty-row td { text-align: center; color: #93918a; padding: 20px; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .count { font-size: 12.5px; color: #93918a; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="13" cy="13" r="12" stroke="#e8560c" stroke-width="1.6"/>
+        <path d="M13 5.5L15.3 11.7L21 13L15.3 14.3L13 20.5L10.7 14.3L5 13L10.7 11.7L13 5.5Z" fill="#e8560c"/>
+      </svg>
+      <span class="brand-name">Atlas<span> AI</span></span>
+    </div>
+    <div class="eyebrow">Admin</div>
+    <h1>Procedure Documents</h1>
+    <p>Upload, review, and remove the documents Atlas AI answers from.
+       Changes are indexed immediately. &nbsp;·&nbsp; <a class="back" href="/">&larr; Back to assistant</a></p>
+  </header>
+
+  <div id="gate" class="card">
+    <h2>Admin token</h2>
+    <input id="token" type="password" placeholder="Paste your admin token" autocomplete="off" />
+    <button id="unlock">Unlock</button>
+    <div id="status-msg"></div>
+  </div>
+
+  <div id="main">
+    <div class="card">
+      <h2>Upload a document</h2>
+      <div class="dropzone" id="dropzone">
+        <div>Drag a file here, or click to choose one</div>
+        <div class="hint">.md, .txt, .pdf, or .docx — up to a few MB</div>
+        <input id="fileInput" type="file" accept=".md,.txt,.pdf,.docx" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0;">Indexed documents</h2>
+        <span class="count" id="chunkCount"></span>
+      </div>
+      <table>
+        <thead><tr><th>File</th><th>Size</th><th></th></tr></thead>
+        <tbody id="docRows"><tr class="empty-row"><td colspan="3">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let token = sessionStorage.getItem('adminToken') || '';
+
+const gate = document.getElementById('gate');
+const main = document.getElementById('main');
+const statusMsg = document.getElementById('status-msg');
+const tokenInput = document.getElementById('token');
+
+function setStatus(msg, isError) {
+  statusMsg.textContent = msg || '';
+  statusMsg.className = msg ? (isError ? 'error' : 'ok') : '';
+}
+
+async function authedFetch(path, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers, { 'X-Admin-Token': token });
+  const res = await fetch(path, opts);
+  if (res.status === 401 || res.status === 503) {
+    sessionStorage.removeItem('adminToken');
+    token = '';
+    showGate(res.status === 503
+      ? 'Admin access is not configured on this deployment (set ADMIN_TOKEN).'
+      : 'Invalid token.');
+    throw new Error('unauthorized');
+  }
+  return res;
+}
+
+function showGate(msg) {
+  gate.style.display = 'block';
+  main.style.display = 'none';
+  if (msg) setStatus(msg, true);
+}
+
+function showMain() {
+  gate.style.display = 'none';
+  main.style.display = 'block';
+  loadDocuments();
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function loadDocuments() {
+  try {
+    const res = await authedFetch('/api/admin/documents');
+    const data = await res.json();
+    document.getElementById('chunkCount').textContent = data.indexed_chunks + ' chunks indexed';
+    const rows = document.getElementById('docRows');
+    if (!data.documents.length) {
+      rows.innerHTML = '<tr class="empty-row"><td colspan="3">No documents yet — upload one above.</td></tr>';
+      return;
+    }
+    rows.innerHTML = data.documents.map(d => `
+      <tr>
+        <td>${escapeHtml(d.filename)}</td>
+        <td class="size">${fmtSize(d.size_bytes)}</td>
+        <td><button class="del" data-name="${escapeHtml(d.filename)}">Remove</button></td>
+      </tr>
+    `).join('');
+    rows.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', () => removeDoc(btn.dataset.name));
+    });
+  } catch (e) { /* handled in authedFetch */ }
+}
+
+async function removeDoc(filename) {
+  if (!confirm(`Remove "${filename}" and reindex?`)) return;
+  try {
+    await authedFetch('/api/admin/documents/' + encodeURIComponent(filename), { method: 'DELETE' });
+    loadDocuments();
+  } catch (e) {}
+}
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  setStatus(`Uploading ${file.name}…`, false);
+  try {
+    const res = await authedFetch('/api/admin/documents', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setStatus(err.detail || 'Upload failed.', true);
+      return;
+    }
+    setStatus(`Uploaded ${file.name}.`, false);
+    loadDocuments();
+  } catch (e) {}
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('unlock').addEventListener('click', () => {
+  const t = tokenInput.value.trim();
+  if (!t) return;
+  token = t;
+  sessionStorage.setItem('adminToken', t);
+  setStatus('', false);
+  showMain();
+});
+tokenInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('unlock').click(); });
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]); fileInput.value = ''; });
+['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e => {
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+if (token) showMain(); else showGate();
+</script>
+</body>
+</html>
